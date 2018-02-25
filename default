@@ -1,0 +1,71 @@
+server {
+    listen 80 default_server;
+    listen 443 ssl;
+    
+    server_name gmzhang.com;
+
+    root /var/www/web;
+    index index.html index.htm index.php;
+	
+	access_log /var/www/log/web/access.log upstream_time;
+	error_log /var/www/log/web/error.log notice;
+    
+    rewrite_log off;
+	client_max_body_size 200M;
+    
+    gzip            on;
+    gzip_min_length 1000;
+    gzip_types    text/plain application/javascript application/x-javascript text/javascript text/xml text/css;
+
+    location ~ \.swf$ {
+        max_ranges 0;
+    }
+	
+	location ~ /null{
+		deny all;
+	}
+	
+	location ~ ^/\. {
+		deny all;
+	}
+	
+	location ~ ^/composer\. {
+		deny all;
+	}
+
+    location / {
+		try_files $uri $uri/ /index.php$is_args$args;
+    }
+
+
+    location ~ \.php$ {
+        try_files $uri =404;
+        
+		if (!-e $request_filename){
+	    	rewrite ^/(\w*?)/(\w*?)\.php$ /index.php?g=$1&c=$2 last;
+		}
+		
+        if (!-e $request_filename){
+            rewrite ^/(\w*?)\.php$ /index.php?c=$1 last;
+        }
+        
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass unix:/var/run/php/php7.0-fpm.sock;
+        fastcgi_index index.php;
+        include fastcgi.conf;
+    }
+
+	location /NginxStatus {
+        stub_status on;
+        access_log on;
+        auth_basic "NginxStatus";
+        allow 127.0.0.1;
+        deny all;
+        }
+	
+	location  ~ ^/status$ {
+        include fastcgi_params;
+        fastcgi_pass unix:/var/run/php/php7.0-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $fastcgi_script_name;
+        }
+}
